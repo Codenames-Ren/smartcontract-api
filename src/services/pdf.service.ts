@@ -3,9 +3,9 @@ import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
+import sharp from "sharp";
 
 const execAsync = promisify(exec);
-
 
 export async function extractPdfText(
     file: File
@@ -35,10 +35,10 @@ export async function extractPdfText(
     );
 
 
-    const document = await pdf(pdfPath);
+    const document = await pdf(pdfPath, {
+        scale: 3,
+    });
 
-
-    let pageNumber = 1;
 
     let imagePath = "";
 
@@ -47,7 +47,7 @@ export async function extractPdfText(
 
         imagePath = join(
             uploadDir,
-            `page-${pageNumber}.png`
+            "ocr-original.png"
         );
 
 
@@ -55,7 +55,6 @@ export async function extractPdfText(
             imagePath,
             image
         );
-
 
         break;
     }
@@ -68,12 +67,48 @@ export async function extractPdfText(
     }
 
 
-    const { stdout } = await execAsync(
-        `tesseract "${imagePath}" stdout -l ind+eng`
+    const processedPath = join(
+        uploadDir,
+        "ocr-processed.png"
     );
 
 
-    const text = stdout.trim();
+    await sharp(imagePath)
+        .resize({
+            width: 2500,
+        })
+        .grayscale()
+        .normalize()
+        .sharpen()
+        .png()
+        .toFile(processedPath);
+
+
+    let text = "";
+
+
+    // OCR utama
+    const first = await execAsync(
+        `tesseract "${processedPath}" stdout -l ind+eng --psm 6`
+    );
+
+
+    text = first.stdout.trim();
+
+
+    // fallback kalau gagal
+    if (!text) {
+
+        const second = await execAsync(
+            `tesseract "${processedPath}" stdout -l ind+eng --psm 3`
+        );
+
+        text = second.stdout.trim();
+    }
+
+
+    console.log("\n===== OCR RESULT =====");
+    console.log(text);
 
 
     if (!text) {

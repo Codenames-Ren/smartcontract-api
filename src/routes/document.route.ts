@@ -80,7 +80,6 @@ export const documentRoute = new Elysia({
     const file = await downloadDocumentController(params.hash);
 
     set.headers["Content-Type"] = "application/pdf";
-    set.headers["Content-Disposition"] = "attachment, filename=document.pdf";
 
     return file;
 })
