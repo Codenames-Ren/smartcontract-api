@@ -107,10 +107,6 @@ export async function extractPdfText(
     }
 
 
-    console.log("\n===== OCR RESULT =====");
-    console.log(text);
-
-
     if (!text) {
         throw new Error(
             "OCR failed to extract text"
